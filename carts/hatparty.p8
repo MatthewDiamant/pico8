@@ -930,9 +930,9 @@ function game_draw()
   p1:draw_hud()
   p2:draw_hud()
   game_over()
-  --print(cpu.lust_timer, 0, 0)
-  --print(cpu.lust_left, 0, 10)
-  --print(cpu.lust_right, 0, 20)
+  print(cpu.lust_timer, 0, 0)
+  print(cpu.lust_left, 0, 10)
+  print(cpu.lust_right, 0, 20)
 end
 
 
@@ -1174,7 +1174,7 @@ function m_cpu()
     end,
 
     calculate_lust=function(self)
-      if self.lust_right - self.lust_left < (8*4 + (self.lust_timer / 60)) then
+      if abs(self.lust_right - self.lust_left) < 8*4 then
         self.lust_timer += 1
       else
         self.lust_timer = 0
