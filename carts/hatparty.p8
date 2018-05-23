@@ -679,6 +679,7 @@ function m_packages()
     packages = {},
     gravity = 0.1,
     ticks = 0,
+    drop_rate = item_values[item_options[item_select]],
     create_health_package=function(self)
       add(self.packages, {
         x = rnd(8*38) + 8,
@@ -719,7 +720,7 @@ function m_packages()
     end,
     update=function(self)
       self.ticks += 1
-      if self.ticks % (60 * 10) == 0 then
+      if self.ticks % (60 * self.drop_rate) == 0 then
         if rnd(1) < 0.25 then
           self:create_health_package()
         else
@@ -831,8 +832,17 @@ level_options = {1, 2}
 health_select = 3
 health_options = {50, 100, 200, 400}
 
-enemy_style_select = 1
+enemy_style_select = 2
 enemy_style_options = {"pacifist", "idiot", "run & gun", "aggro"}
+
+item_select = 3
+item_options = {"none", "some", "lots", "tons!"}
+item_values = {
+  ["none"] = 99999,
+  ["some"] = 20,
+  ["lots"] = 10,
+  ["tons!"] = 1,
+}
 
 xc_pause = 0
 
@@ -869,12 +879,20 @@ function option_update()
       enemy_style_select = min(enemy_style_select + 1, #enemy_style_options)
     end
   end
+  if option_select == 3 then
+    if btnp(0) then
+      item_select = max(item_select - 1, 1)
+    end
+    if btnp(1) then
+      item_select = min(item_select + 1, #item_options)
+    end
+  end
 
   if btnp(2) then
     option_select = max(option_select - 1, 0)
   end
   if btnp(3) then
-    option_select = min(option_select + 1, 2)
+    option_select = min(option_select + 1, 3)
   end
 
   if btn(4) and btn(5) and xc_pause <= 0 then
@@ -930,6 +948,17 @@ function option_draw()
     end
     if enemy_style_select < #enemy_style_options then
       spr(144, 115, 36, 1, 1, false)
+    end
+  end
+
+  print("items: ", 40, 44, 7)
+  print(item_options[item_select], 76, 44, 7)
+  if option_select == 3 and ticks % 30 > 15 then
+    if item_select > 1 then
+      spr(144, 64, 44, 1, 1, true)
+    end
+    if item_select < #item_options then
+      spr(144, 95, 44, 1, 1, false)
     end
   end
 
