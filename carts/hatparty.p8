@@ -831,6 +831,9 @@ level_options = {1, 2}
 health_select = 3
 health_options = {50, 100, 200, 400}
 
+enemy_style_select = 1
+enemy_style_options = {"pacifist", "idiot", "run & gun", "aggro"}
+
 xc_pause = 0
 
 function title_update()
@@ -858,12 +861,22 @@ function option_update()
       health_select = min(health_select + 1, #health_options)
     end
   end
-  if btn(2) then
+  if option_select == 2 then
+    if btnp(0) then
+      enemy_style_select = max(enemy_style_select - 1, 1)
+    end
+    if btnp(1) then
+      enemy_style_select = min(enemy_style_select + 1, #enemy_style_options)
+    end
+  end
+
+  if btnp(2) then
     option_select = max(option_select - 1, 0)
   end
-  if btn(3) then
-    option_select = min(option_select + 1, 1)
+  if btnp(3) then
+    option_select = min(option_select + 1, 2)
   end
+
   if btn(4) and btn(5) and xc_pause <= 0 then
     reset_game()
     game_state = "game"
@@ -906,6 +919,17 @@ function option_draw()
     end
     if health_select < #health_options then
       spr(144, 91, 28, 1, 1, false)
+    end
+  end
+
+  print("enemy style: ", 16, 36, 7)
+  print(enemy_style_options[enemy_style_select], 76, 36, 7)
+  if option_select == 2 and ticks % 30 > 15 then
+    if enemy_style_select > 1 then
+      spr(144, 64, 36, 1, 1, true)
+    end
+    if enemy_style_select < #enemy_style_options then
+      spr(144, 115, 36, 1, 1, false)
     end
   end
 
@@ -1272,7 +1296,19 @@ function m_cpu()
 
     update=function(self)
       self.ticks+=1
-      self:aggro()
+
+      local enemy_style = enemy_style_options[enemy_style_select]
+
+      if enemy_style == "pacifist" then
+        self:pacifist()
+      elseif enemy_style == "idiot" then
+        self:idiot()
+      elseif enemy_style == "run & gun" then
+        self:run_and_gun()
+      elseif enemy_style == "aggro" then
+        self:aggro()
+      end
+
       self:calculate_lust()
       if ticks % 60 == 0 then
         self:calculate_closest_package()
