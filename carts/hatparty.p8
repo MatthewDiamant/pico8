@@ -680,10 +680,11 @@ function m_packages()
     gravity = 0.1,
     ticks = 0,
     drop_rate = item_values[item_options[item_select]],
+    health_to_weapon_ratio = 0.33,
     create_health_package=function(self)
       add(self.packages, {
-        x = rnd(8*38) + 8,
-        y = rnd(8*18) + 8,
+        x = rnd(8*36) + 8*2,
+        y = rnd(8*17) + 8*2,
         dy = 0.1,
         h = 5,
         w = 7,
@@ -706,7 +707,7 @@ function m_packages()
       end
     end,
     create_weapon_package=function(self)
-      local weapon_contents = weapon_types[flr(rnd(#weapon_types)) + 1]
+      local weapon_contents = weapon_package_types[flr(rnd(#weapon_package_types)) + 1]
       add(self.packages, {
         x = rnd(8*36) + 8*2,
         y = rnd(8*17) + 8*2,
@@ -721,7 +722,7 @@ function m_packages()
     update=function(self)
       self.ticks += 1
       if self.ticks % (60 * self.drop_rate) == 0 then
-        if rnd(1) < 0.25 then
+        if rnd(1) < self.health_to_weapon_ratio then
           self:create_health_package()
         else
           self:create_weapon_package()
@@ -833,7 +834,7 @@ health_select = 3
 health_options = {50, 100, 200, 400}
 
 enemy_style_select = 2
-enemy_style_options = {"pacifist", "idiot", "run & gun", "aggro"}
+enemy_style_options = {"pacifist", "idiot", "run & gun", "aggro", "genius"}
 
 item_select = 3
 item_options = {"none", "some", "lots", "tons!"}
@@ -1152,8 +1153,7 @@ weapons={
   },
 }
 
-weapon_types={
-  weapons.handgun,
+weapon_package_types={
   weapons.ak47,
   weapons.minigun,
   weapons.shotgun,
@@ -1176,6 +1176,9 @@ function m_cpu()
     lust_left=0,
     lust_right=8*40,
     closest_package={
+      distance = 999,
+    },
+    closest_health={
       distance = 999,
     },
 
@@ -1232,20 +1235,13 @@ function m_cpu()
     end,
 
     jump_towards_object=function(self, object)
-      if p1.y < p2.y then
+      if object.y < p2.y then
         self:jump_to_ledges(1)
       end
     end,
 
-    get_out_from_blocked_object=function(self, object)
-      if abs(object.y - p2.y) > 2*8 and
-         abs(object.x - p2.x) < (8*4 + (self.lust_timer / 60)) then
-          self:run_right()
-      end
-    end,
-
     calculate_lust=function(self)
-      if abs(self.lust_right - self.lust_left) < 8*4 then
+      if abs(self.lust_right - self.lust_left) < 8*3 then
         self.lust_timer += 1
       else
         self.lust_timer = 0
@@ -1274,27 +1270,33 @@ function m_cpu()
     end,
 
     calculate_closest_package=function(self)
-      local closest = {
-        distance = 999,
-      }
+      local closest_package = { distance = 999 }
+      local closest_health = { distance = 999 }
       for p in all(packages.packages) do
         local distance = m_vec(p2.x - p.x, p2.y - p.y):get_length()
-        if distance < closest.distance then
+        if distance < closest_package.distance then
           p.distance = distance
-          closest = p
+          self.closest_package = p
+        end
+        if p.type == "health" and distance < closest_health.distance then
+          p.distance = distance
+          self.closest_health = p
         end
       end
-      self.closest_package = closest
     end,
 
     item_lust=function(self)
-      if (self.closest_package.distance < 999) then
+      if (self.closest_package.distance < 999 and self.lust_timer < 150) then
         self:run_towards_object(self.closest_package)
         self:jump_towards_object(self.closest_package)
-        self:get_out_from_blocked_object(self.closest_package)
       else
         self:pacifist()
       end
+    end,
+
+    pacifist=function(self)
+      self:laps()
+      self:jump_to_ledges(0.2)
     end,
 
     idiot=function(self)
@@ -1304,11 +1306,6 @@ function m_cpu()
         self.j= rnd(1) < 0.5
         self.f= rnd(1) < 0.5
       end
-    end,
-
-    pacifist=function(self)
-      self:laps()
-      self:jump_to_ledges(0.2)
     end,
 
     run_and_gun=function(self)
@@ -1323,23 +1320,42 @@ function m_cpu()
       self:shoot_in_range()
     end,
 
+    genius=function(self)
+      if self.lust_timer < 150 and
+       self.closest_health.distance < 999 then
+        self:run_towards_object(self.closest_health)
+        self:jump_towards_object(self.closest_health)
+      elseif self.lust_timer < 150 and
+       p2.weapon.name == "handgun" and
+       self.closest_package.distance < 999 then
+        self:run_towards_object(self.closest_package)
+        self:jump_towards_object(self.closest_package)
+      else
+        self:run_towards_object(p1)
+        self:jump_towards_object(p1)
+      end
+      self:shoot_in_range()
+    end,
+
     update=function(self)
       self.ticks+=1
 
       local enemy_style = enemy_style_options[enemy_style_select]
 
       if enemy_style == "pacifist" then
-        self:pacifist()
+        self:item_lust()
       elseif enemy_style == "idiot" then
         self:idiot()
       elseif enemy_style == "run & gun" then
         self:run_and_gun()
       elseif enemy_style == "aggro" then
         self:aggro()
+      elseif enemy_style == "genius" then
+        self:genius()
       end
 
       self:calculate_lust()
-      if ticks % 60 == 0 then
+      if ticks % 10 == 0 then
         self:calculate_closest_package()
       end
     end,
