@@ -831,7 +831,17 @@ level_options = {1, 2}
 health_select = 3
 health_options = {50, 100, 200, 400}
 
+xc_pause = 0
+
 function title_update()
+  if btn(4) and btn(5) then
+    xc_pause = 120
+    game_state = "option"
+  end
+end
+
+function option_update()
+  xc_pause -= 1
   if option_select == 0 then
     if btnp(0) then
       level_select = max(level_select - 1, 1)
@@ -854,7 +864,7 @@ function title_update()
   if btn(3) then
     option_select = min(option_select + 1, 1)
   end
-  if btn(4) and btn(5) then
+  if btn(4) and btn(5) and xc_pause <= 0 then
     reset_game()
     game_state = "game"
   end
@@ -873,25 +883,29 @@ function title_draw()
   spr(130, 56 + title_offset_x, title_offset_y)
   spr(133, 64 + title_offset_x, title_offset_y)
 
-  print("level: ", 40, 64, 7)
-  print(level_select, 76, 64, 7)
+  print_centered("press z + x", 80, 7)
+end
+
+function option_draw()
+  print("level: ", 40, 20, 7)
+  print(level_select, 76, 20, 7)
   if option_select == 0 and ticks % 30 > 15 then
     if level_select > 1 then
-      spr(144, 64, 64, 1, 1, true)
+      spr(144, 64, 20, 1, 1, true)
     end
     if level_select < #level_options then
-      spr(144, 83, 64, 1, 1, false)
+      spr(144, 83, 20, 1, 1, false)
     end
   end
 
-  print("health: ", 36, 72, 7)
-  print(health_options[health_select], 76, 72, 7)
+  print("health: ", 36, 28, 7)
+  print(health_options[health_select], 76, 28, 7)
   if option_select == 1 and ticks % 30 > 15 then
     if health_select > 1 then
-      spr(144, 64, 72, 1, 1, true)
+      spr(144, 64, 28, 1, 1, true)
     end
     if health_select < #health_options then
-      spr(144, 91, 72, 1, 1, false)
+      spr(144, 91, 28, 1, 1, false)
     end
   end
 
@@ -949,6 +963,8 @@ function _update60()
 	ticks+=1
   if game_state == "title" then
     title_update()
+  elseif game_state == "option" then
+    option_update()
   elseif game_state == "game" then
     game_update()
   end
@@ -958,6 +974,8 @@ function _draw()
   cls(0)
   if game_state == "title" then
     title_draw()
+  elseif game_state == "option" then
+    option_draw()
   elseif game_state == "game" then
     game_draw()
   end
